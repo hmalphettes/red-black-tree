@@ -16,30 +16,9 @@ using std::size_t;
 #include <stdlib.h>
 #endif
 
-#ifndef HEIGHT_LIMIT
-#define HEIGHT_LIMIT 64 /* Tallest allowable tree */
-#endif
-
-typedef struct jsw_rbnode {
-  int                red;     /* Color (1=red, 0=black) */
-  void              *data;    /* User-defined content */
-  struct jsw_rbnode *link[2]; /* Left (0) and right (1) links */
-} jsw_rbnode_t;
-
-struct jsw_rbtree {
-  jsw_rbnode_t *root; /* Top of the tree */
-  cmp_f         cmp;  /* Compare two items */
-  dup_f         dup;  /* Clone an item (user-defined) */
-  rel_f         rel;  /* Destroy an item (user-defined) */
-  size_t        size; /* Number of items (user-defined) */
-};
-
-struct jsw_rbtrav {
-  jsw_rbtree_t *tree;               /* Paired tree */
-  jsw_rbnode_t *it;                 /* Current node */
-  jsw_rbnode_t *path[HEIGHT_LIMIT]; /* Traversal path */
-  size_t        top;                /* Top of stack */
-};
+//
+// SNIPPED
+//
 
 /**
   <summary>
