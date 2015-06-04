@@ -269,6 +269,48 @@ void *jsw_rbfind_floor ( jsw_rbtree_t *tree, void *data )
   return closest;
 }
 
+/**
+  <summary>
+  Search for the biggest node in a red black tree
+  that value is equal or lesser to the specified data
+  <summary>
+  <param name="tree">The tree to search</param>
+  <param name="data">The data value to search for</param>
+  <returns>
+  A pointer to the data value stored in the tree
+  </returns>
+*/
+void *jsw_rbfind_closest ( jsw_rbtree_t *tree, void *data )
+{
+  jsw_rbnode_t *it = tree->root;
+  void *lesser, *bigger;
+
+  while ( it != NULL ) {
+    int cmp = tree->cmp ( it->data, data );
+
+    if (cmp == 0)
+      return it->data;
+    else if (cmp < 0)
+      lesser = it->data;
+    else
+      bigger = it->data;
+
+    /*
+      If the tree supports duplicates, they should be
+      chained to the right subtree for this to work
+    */
+    it = it->link[cmp < 0];
+  }
+  if (lesser == NULL) {
+    return bigger;
+  } else if (bigger == NULL) {
+    return lesser;
+  } else {
+    return tree->cmp (bigger, data) + tree->cmp (lesser, data) > 0 ?
+      lesser : bigger;    
+  }
+}
+
 
 /**
   <summary>
