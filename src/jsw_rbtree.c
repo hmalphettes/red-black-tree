@@ -189,7 +189,7 @@ void *jsw_rbfind ( jsw_rbtree_t *tree, void *data )
     int cmp = tree->cmp ( it->data, data );
 
     if ( cmp == 0 )
-      break;
+      return it->data;
 
     /*
       If the tree supports duplicates, they should be
@@ -198,8 +198,77 @@ void *jsw_rbfind ( jsw_rbtree_t *tree, void *data )
     it = it->link[cmp < 0];
   }
 
-  return it == NULL ? NULL : it->data;
+  return NULL;
 }
+
+/**
+  <summary>
+  Search for the smallest node in a red black tree
+  that value is equal or greater to the specified data
+  <summary>
+  <param name="tree">The tree to search</param>
+  <param name="data">The data value to search for</param>
+  <returns>
+  A pointer to the data value stored in the tree
+  </returns>
+*/
+void *jsw_rbfind_ceiling ( jsw_rbtree_t *tree, void *data )
+{
+  jsw_rbnode_t *it = tree->root;
+  void *closest;
+
+  while ( it != NULL ) {
+    int cmp = tree->cmp ( it->data, data );
+
+    if (cmp == 0)
+      return it->data;
+    else if (cmp > 0)
+      closest = it->data;
+
+    /*
+      If the tree supports duplicates, they should be
+      chained to the right subtree for this to work
+    */
+    it = it->link[cmp < 0];
+  }
+
+  return closest;
+}
+
+/**
+  <summary>
+  Search for the biggest node in a red black tree
+  that value is equal or lesser to the specified data
+  <summary>
+  <param name="tree">The tree to search</param>
+  <param name="data">The data value to search for</param>
+  <returns>
+  A pointer to the data value stored in the tree
+  </returns>
+*/
+void *jsw_rbfind_floor ( jsw_rbtree_t *tree, void *data )
+{
+  jsw_rbnode_t *it = tree->root;
+  void *closest;
+
+  while ( it != NULL ) {
+    int cmp = tree->cmp ( it->data, data );
+
+    if (cmp == 0)
+      return it->data;
+    else if (cmp < 0)
+      closest = it->data;
+
+    /*
+      If the tree supports duplicates, they should be
+      chained to the right subtree for this to work
+    */
+    it = it->link[cmp < 0];
+  }
+
+  return closest;
+}
+
 
 /**
   <summary>

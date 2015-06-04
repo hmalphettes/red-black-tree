@@ -187,65 +187,22 @@ void centroid_arr_shuffle(centroid_t *array, size_t n)
     }
 }
 
-centroid_t* _centroidset_floor(jsw_rbtrav_t *rbtrav, double x)
-{
-	centroid_t *curr, *next;
-  curr = rbtrav->it->data;
-  if (x == curr->mean) {
-    return curr;
-  } else if (x > curr->mean) {
-    next = jsw_rbtprev(rbtrav); /* Toward smaller items */
-  } else {
-    next = jsw_rbtnext(rbtrav); /* Toward bigger items */
-  }
-  if (!next) { return curr; }
-  next = _centroidset_floor(rbtrav, x);
-  return !next ? curr : next;
-}
 centroid_t* centroidset_floor(centroidset_t *centroidset, double x)
 {
-	jsw_rbtrav_t *rbtrav;
-	rbtrav = jsw_rbtnew();
+	centroid_t *centroid, centroid_find;
 
-	centroid_t *root;
-	root = jsw_rbtlast(rbtrav, centroidset);
-  root = _centroidset_floor(rbtrav, x);
-  jsw_rbtdelete(rbtrav);  
-  return root;
+	centroid_find.mean = x;
+	centroid = jsw_rbfind_floor(centroidset, &centroid_find);
+	return centroid;
 }
 
-centroid_t* _centroidset_ceiling(jsw_rbtrav_t *rbtrav, double x)
-{
-	centroid_t *curr, *next;
-  curr = rbtrav->it->data;
-  printf("centroid ceiling - curr: ");
-  centroid_print(curr);
-  if (x == curr->mean) {
-    return curr;
-  } else if (x < curr->mean) {
-    printf("Lookin for smaller\n");
-    next = jsw_rbtprev(rbtrav); /* Toward smaller items */
-  } else {
-    printf("Lookin for bigger\n");
-    next = jsw_rbtnext(rbtrav); /* Toward bigger items */
-  }
-  centroid_print(next);
-  if (!next) {
-    return curr;
-  }
-  next = _centroidset_ceiling(rbtrav, x);
-  return !next ? curr : next;
-}
 centroid_t* centroidset_ceiling(centroidset_t *centroidset, double x)
 {
-	jsw_rbtrav_t *rbtrav;
-	rbtrav = jsw_rbtnew();
+	centroid_t *centroid, centroid_find;
 
-	centroid_t *root;
-	root = jsw_rbtfirst(rbtrav, centroidset);
-  root = _centroidset_ceiling(rbtrav, x);
-  jsw_rbtdelete(rbtrav);
-  return root;
+	centroid_find.mean = x;
+	centroid = jsw_rbfind_ceiling(centroidset, &centroid_find);
+	return centroid;
 }
 
 // centroid_t* centroidset_get_closest_centroids(centroidset_t *centroidset, double x)
