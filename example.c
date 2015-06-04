@@ -1,6 +1,7 @@
 // Example.
 
 #include "src/centroid.c"
+#include <assert.h>
 
 int main()
 {
@@ -25,6 +26,7 @@ int main()
 	printf("erase 1.800000: %f\n", ret);
 	ret = centroidset_find(centroidset, 1.800000);
 	printf("find 1.8: %f\n", ret);
+	assert (ret != ret); // is NaN
 	centroidset_printset(centroidset);
 
   // printf("\nNow moving on to stage 2\n");
@@ -40,9 +42,19 @@ int main()
   centroid_t* c = centroidset_ceiling(centroidset, 1.8);
   printf("ceiling: smallest gte 1.8: ");
   centroid_print(c);
+	assert (c->mean == 2.0f);
   centroid_t* f = centroidset_floor(centroidset, 1.8);
   printf("floor: biggest lte 1.8: ");
   centroid_print(f);
+	assert (f->mean == 1.5f);
+	f = centroidset_closest(centroidset, 1.8);
+  printf("closest to 1.8: ");
+  centroid_print(f);
+	assert (f->mean == 2.0f);
+	f = centroidset_closest(centroidset, 1.7);
+  printf("closest to 1.7: ");
+  centroid_print(f);
+	assert (f->mean == 1.5f);
 
 	centroidset_delete(centroidset);
 }

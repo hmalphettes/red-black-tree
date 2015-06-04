@@ -24,6 +24,7 @@ static int centroid_cmp(const void *p1, const void *p2)
 	centroid1 = (centroid_t*)p1;
 	centroid2 = (centroid_t*)p2;
 
+  // return centroid1->mean - centroid2->mean;
 	if (centroid1->mean > centroid2->mean)
 		return 1;
 
@@ -31,6 +32,25 @@ static int centroid_cmp(const void *p1, const void *p2)
 		return -1;
 
 	return 0;
+}
+
+/**
+ * Returns the closest to p0 amongst plt or pgt
+ * Assumes none of the values are null and that plt is strictly lesser than p0
+ * and pgt is strictly greater than p0
+ */
+static const void* centroid_closest(const void *p0, const void *plt, const void *pgt)
+{
+	centroid_t *cntrd_0, *cntrd_lt, *cntrd_gt;
+
+	cntrd_0 = (centroid_t*)p0;
+	cntrd_lt = (centroid_t*)plt;
+	cntrd_gt = (centroid_t*)pgt;
+
+  if (cntrd_0->mean - cntrd_lt->mean > cntrd_gt->mean - cntrd_0->mean)
+    return pgt;
+  else
+    return plt;
 }
 
 static void *centroid_dup(void *p)
@@ -51,7 +71,7 @@ static void centroid_rel(void *p)
 centroidset_t *centroidset_new()
 {
 	jsw_rbtree_t *rbtree;
-	rbtree = jsw_rbnew(centroid_cmp, centroid_dup, centroid_rel);
+	rbtree = jsw_rbnew(centroid_cmp, centroid_closest, centroid_dup, centroid_rel);
 
 	return rbtree;
 }
@@ -205,11 +225,14 @@ centroid_t* centroidset_ceiling(centroidset_t *centroidset, double x)
 	return centroid;
 }
 
-// centroid_t* centroidset_get_closest_centroids(centroidset_t *centroidset, double x)
-// {
-//   return NULL;
-// }
+centroid_t* centroidset_closest(centroidset_t *centroidset, double x)
+{
+	centroid_t *centroid, centroid_find;
 
+	centroid_find.mean = x;
+	centroid = (centroidset_t *)jsw_rbfind_closest(centroidset, &centroid_find);
+	return centroid;
+}
 
 /*
 

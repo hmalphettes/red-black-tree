@@ -114,7 +114,7 @@ static jsw_rbnode_t *new_node ( jsw_rbtree_t *tree, void *data )
   The returned pointer must be released with jsw_rbdelete
   </remarks>
 */
-jsw_rbtree_t *jsw_rbnew ( cmp_f cmp, dup_f dup, rel_f rel )
+jsw_rbtree_t *jsw_rbnew ( cmp_f cmp, closest_f closest, dup_f dup, rel_f rel )
 {
   jsw_rbtree_t *rt = (jsw_rbtree_t *)malloc ( sizeof *rt );
 
@@ -123,6 +123,7 @@ jsw_rbtree_t *jsw_rbnew ( cmp_f cmp, dup_f dup, rel_f rel )
 
   rt->root = NULL;
   rt->cmp = cmp;
+  rt->closest = closest;
   rt->dup = dup;
   rt->rel = rel;
   rt->size = 0;
@@ -301,14 +302,12 @@ void *jsw_rbfind_closest ( jsw_rbtree_t *tree, void *data )
     */
     it = it->link[cmp < 0];
   }
-  if (lesser == NULL) {
+  if (lesser == NULL)
     return bigger;
-  } else if (bigger == NULL) {
+  else if (bigger == NULL)
     return lesser;
-  } else {
-    return tree->cmp (bigger, data) + tree->cmp (lesser, data) > 0 ?
-      lesser : bigger;    
-  }
+  else
+    return tree->closest(data, lesser, bigger);
 }
 
 
