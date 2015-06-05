@@ -38,8 +38,10 @@ static int centroid_cmp(const void *p1, const void *p2)
  * Returns the closest to p0 amongst plt or pgt
  * Assumes none of the values are null and that plt is strictly lesser than p0
  * and pgt is strictly greater than p0
+ *
+ * When plt and gpt are at equal distance we assign to the return pointers plt and pgt and return NULL
  */
-static const void* centroid_closest(const void *p0, const void *plt, const void *pgt)
+static jsw_rbclosest_t centroid_closest(const void *p0, const void *plt, const void *pgt)
 {
 	centroid_t *cntrd_0, *cntrd_lt, *cntrd_gt;
 
@@ -47,10 +49,22 @@ static const void* centroid_closest(const void *p0, const void *plt, const void 
 	cntrd_lt = (centroid_t*)plt;
 	cntrd_gt = (centroid_t*)pgt;
 
-  if (cntrd_0->mean - cntrd_lt->mean > cntrd_gt->mean - cntrd_0->mean)
-    return pgt;
-  else
-    return plt;
+  double gt_diff = cntrd_gt->mean - cntrd_0->mean;
+  double lt_diff = cntrd_0->mean - cntrd_lt->mean;
+
+  jsw_rbclosest_t res;
+  if (lt_diff > gt_diff) {
+    res.data0 = pgt;
+    res.data1 = NULL;
+  } else if (lt_diff < gt_diff) {
+    res.data0 = plt;
+    res.data1 = NULL;
+  } else {
+    //equi-distance
+    res.data0 = plt;
+    res.data1 = pgt;
+  }
+  return res;
 }
 
 static void *centroid_dup(void *p)
@@ -225,13 +239,28 @@ centroid_t* centroidset_ceiling(centroidset_t *centroidset, double x)
 	return centroid;
 }
 
-centroid_t* centroidset_closest(centroidset_t *centroidset, double x)
+void centroid_pair_print(centroid_pair_t pair) {
+  centroid_print(pair.data0);
+  if (pair.data1 != NULL) {
+    centroid_print(pair.data1);
+  }
+}
+
+
+/**
+ *
+ */
+centroid_pair_t centroidset_closest(centroidset_t *centroidset, double x)
 {
-	centroid_t *centroid, centroid_find;
+	centroid_t centroid_find;
 
 	centroid_find.mean = x;
-	centroid = (centroidset_t *)jsw_rbfind_closest(centroidset, &centroid_find);
-	return centroid;
+	jsw_rbclosest_t res = jsw_rbfind_closest(centroidset, &centroid_find);
+
+  centroid_pair_t cres;
+  cres.data0 = (centroid_t *)res.data0;
+  cres.data1 = (centroid_t *)res.data1;
+	return cres;
 }
 
 /*

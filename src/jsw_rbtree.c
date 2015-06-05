@@ -281,7 +281,7 @@ void *jsw_rbfind_floor ( jsw_rbtree_t *tree, void *data )
   A pointer to the data value stored in the tree
   </returns>
 */
-void *jsw_rbfind_closest ( jsw_rbtree_t *tree, void *data )
+jsw_rbclosest_t jsw_rbfind_closest ( const jsw_rbtree_t *tree, const void *data )
 {
   jsw_rbnode_t *it = tree->root;
   void *lesser, *bigger;
@@ -289,25 +289,32 @@ void *jsw_rbfind_closest ( jsw_rbtree_t *tree, void *data )
   while ( it != NULL ) {
     int cmp = tree->cmp ( it->data, data );
 
-    if (cmp == 0)
-      return it->data;
-    else if (cmp < 0)
+    if (cmp == 0) {
+      jsw_rbclosest_t res00;
+      res00.data0 = it->data;
+      return res00;
+    } else if (cmp < 0) {
       lesser = it->data;
-    else
+    } else {
       bigger = it->data;
-
+    }
     /*
       If the tree supports duplicates, they should be
       chained to the right subtree for this to work
     */
     it = it->link[cmp < 0];
   }
-  if (lesser == NULL)
-    return bigger;
-  else if (bigger == NULL)
-    return lesser;
-  else
+  if (lesser == NULL) {
+    jsw_rbclosest_t res0;
+    res0.data0 = bigger;
+    return res0;
+  } else if (bigger == NULL) {
+    jsw_rbclosest_t res1;
+    res1.data0 = lesser;
+    return res1;
+  } else {
     return tree->closest(data, lesser, bigger);
+  }
 }
 
 

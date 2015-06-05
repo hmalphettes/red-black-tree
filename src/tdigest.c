@@ -1,5 +1,4 @@
 #include "jsw_rbtree.h"
-//#include "jsw_rbtree.c" // why do we need to include the source here?
 #include "centroid.h"
 #include "centroid.c"
 
@@ -30,10 +29,22 @@ void tdigest__update_centroid(tdigest_t * tdigest, double x, int w)
 
 void tdigest_update(tdigest_t * tdigest, double x, int w) {
   tdigest->count += w;
-  if (w == tdigest->count) {
+  if (w == tdigest->count) { // no node yet in the tdigest.
     centroidset_weighted_insert(tdigest->centroidset, x, w);
     return;
   }
+  // centroid_t *closest_centroid;
+  // closest_centroid = centroidset_closest(tdigest->centroidset, x);
+  //
+  // struct timeval tv;
+  // gettimeofday(&tv, NULL);
+  // int usec = tv.tv_usec;
+  // srand48(usec);
+  //
+  // while (closest_centroid->count != 0 && w > 0) {
+  //   size_t j = (unsigned int) (drand48()*(closest_centroid->count));
+  //   c_j = closest_centroid[j]
+  // }
   // TODO
 }
 
