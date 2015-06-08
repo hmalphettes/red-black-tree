@@ -28,7 +28,7 @@ build/lib/libjsw_rbtree.a: $(OBJS)
 	$(AR) -crs $@ $^
 
 clean:
-	rm -fr *.o build example example.dSYM src/*.o
+	rm -fr *.o build test-centroid test-centroid.dSYM src/*.o
 
 test-centroid: build
 	$(CC) $(CFLAGS) -Ibuild/include -o test-centroid test-centroid.c -Lbuild/lib -ljsw_rbtree
