@@ -30,8 +30,8 @@ build/lib/libjsw_rbtree.a: $(OBJS)
 clean:
 	rm -fr *.o build example example.dSYM src/*.o
 
-example: build
-	$(CC) $(CFLAGS) -Ibuild/include -o example example.c -Lbuild/lib -ljsw_rbtree
+test-centroid: build
+	$(CC) $(CFLAGS) -Ibuild/include -o test-centroid test-centroid.c -Lbuild/lib -ljsw_rbtree
 
 install: all
 	mkdir -p $(PREFIX)/include/jsw_rbtree

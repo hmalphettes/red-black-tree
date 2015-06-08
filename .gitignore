@@ -4,4 +4,4 @@
 *.o
 *.sw*
 /build
-example
+test-centroid

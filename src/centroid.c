@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include <sys/time.h>
+#include <stdbool.h>
 
 void centroid_update(centroid_t *centroid, double x, int delta_weight)
 {
@@ -51,7 +51,8 @@ static jsw_rbclosest_t centroid_closest(const void *p0, const void *plt, const v
 
   double gt_diff = cntrd_gt->mean - cntrd_0->mean;
   double lt_diff = cntrd_0->mean - cntrd_lt->mean;
-
+// TODO: do we need to use epsilon for approximately equal comparisons?
+// refer to the original tdigest java source where this type of issue was fixed.
   jsw_rbclosest_t res;
   if (lt_diff > gt_diff) {
     res.data0 = pgt;
@@ -171,6 +172,11 @@ void centroidset_printset(centroidset_t *centroidset)
   jsw_rbtdelete(rbtrav);
 }
 
+void centroidset_pop(centroidset_t *centroidset, centroid_t *centroid)
+{
+  jsw_rberase(centroidset, centroid);
+}
+
 centroid_t * centroidset_values(centroidset_t *centroidset)
 {
   size_t size = jsw_rbsize(centroidset);
@@ -193,7 +199,7 @@ centroid_t * centroidset_values(centroidset_t *centroidset)
   return centroid_arr;
 }
 
-size_t centroid_size(centroidset_t *centroidset)
+size_t centroidset_size(centroidset_t *centroidset)
 {
   return jsw_rbsize(centroidset);
 }
@@ -204,21 +210,20 @@ size_t centroid_size(centroidset_t *centroidset)
    number generator. */
 void centroid_arr_shuffle(centroid_t *array, size_t n)
 {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    int usec = tv.tv_usec;
-    srand48(usec);
-
-    if (n <= 1) {
-      return;
-    }
-    size_t i;
-    for (i = n - 1; i > 0; i--) {
-      size_t j = (unsigned int) (drand48()*(i+1));
-      centroid_t t = array[j];
-      array[j] = array[i];
-      array[i] = t;
-    }
+  static bool seeded = false;
+  if (!seeded) {
+    seed_srand();
+  }
+  if (n <= 1) {
+    return;
+  }
+  size_t i;
+  for (i = n - 1; i > 0; i--) {
+    size_t j = (unsigned int) (drand48()*(i+1));
+    centroid_t t = array[j];
+    array[j] = array[i];
+    array[i] = t;
+  }
 }
 
 centroid_t* centroidset_floor(centroidset_t *centroidset, double x)
