@@ -61,6 +61,7 @@ int main()
 	assert (p.data0->mean == 1.5f);
 	assert (p.data1->mean == 2.0f);
 
+	// Test find_first find_last
 	c= (centroid_t*) jsw_rbfind_last(centroidset);
 	printf("find_last ");
 	centroid_print(c);
@@ -71,7 +72,7 @@ int main()
 	centroid_print(first);
 	assert(first->mean == 1.0f);
 
-	// Test peek find_first find_last
+	// Test peek and rbtrav
 	jsw_rbtrav_t *rbtrav;
 	rbtrav = jsw_rbtnew();
 	first = jsw_rbtfirst(rbtrav, centroidset);
@@ -90,6 +91,7 @@ int main()
 	assert(c == f);
 	f = jsw_rbtpeekprev(rbtrav);
 	assert(f == first);
+	jsw_rbtdelete(rbtrav);
 
 
 	centroidset_delete(centroidset);
