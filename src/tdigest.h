@@ -11,6 +11,7 @@ typedef struct tdigest
   int               compression;
 } tdigest_t;
 
-void tdigest_update(tdigest_t * tdigest, double x, const size_t w);
+tdigest_t   *tdigest_new(double delta, int compression);
+void        tdigest_update(tdigest_t * tdigest, double x, const size_t w);
 
 #endif

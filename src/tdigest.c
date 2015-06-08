@@ -162,3 +162,132 @@ tdigest_t * tdigest__add(tdigest_t *self, tdigest_t *other_digest)
   i++;
   return tdigest_new_fromdata(self, data, i);
 }
+
+/////////////////////// PUBLIC API
+/*
+ * Computes the percentile of a specific value in [0,1], ie. computes F^{-1}(q) where F^{-1} denotes
+ * the inverse CDF of the distribution.
+ */
+double percentile(tdigest_t *self, double q)
+{
+  if (q < 0 || q >1) {
+    printf("Invalid argument to request a percentile: %f must be between 0 and 1, inclusive.", q);
+    return -1.0f;
+  }
+  double t = 0, k;
+  q = q * self->count;
+
+  // iterate over all the values in the tree that are between the minimum and
+  // strictly less than the centroid mean. and sum up their weight.
+  centroidset_t *tree = self->centroidset;
+  size_t max_ind = centroidset_size(tree) -1;
+
+	jsw_rbtrav_t *rbtrav;
+	rbtrav = jsw_rbtnew();
+
+  centroid_t *centroid;
+	centroid = jsw_rbtfirst(rbtrav, tree);
+  size_t i = 0;
+	do {
+    k = centroid->weight;
+    if (q < t + k) {
+      if (i == 0 || i == max_ind) {
+        return centroid->mean;
+      }
+      double delta = (((centroid_t *)jsw_rbtpeeknext(rbtrav))->mean - ((centroid_t *)jsw_rbtpeekprev(rbtrav))->mean) / 2.0f;
+      return centroid->mean + ((q - t) / k - 0.5) * delta;
+    }
+    t += k;
+    i++;
+	} while ((centroid = jsw_rbtnext(rbtrav)) != NULL);
+  jsw_rbtdelete(rbtrav);
+
+  return ((centroid_t *)jsw_rbfind_last(tree))->mean;
+/*def percentile(self, q):
+    if not (0 <= q <= 1):
+        raise ValueError("q must be between 0 and 1, inclusive.")
+
+    t = 0
+    q *= self.n
+
+    for i, key in enumerate(self.C.keys()):
+        c_i = self.C[key]
+        k = c_i.count
+        if q < t + k:
+            if i == 0:
+                return c_i.mean
+            elif i == len(self) - 1:
+                return c_i.mean
+            else:
+                delta = (self.C.succ_item(key)[1].mean - self.C.prev_item(key)[1].mean) / 2.
+            return c_i.mean + ((q - t) / k - 0.5) * delta
+
+        t += k
+    return self.C.max_item()[1].mean
+*/
+}
+
+/*
+ * Computes the quantile of a specific value, ie. computes F(q) where F denotes
+ * the CDF of the distribution.
+ */
+double quantile(tdigest_t *self, double q) {
+/*def quantile(self, q):
+    t = 0
+    N = float(self.n)
+
+    for i, key in enumerate(self.C.keys()):
+        c_i = self.C[key]
+        if i == len(self) - 1:
+            delta = (c_i.mean - self.C.prev_item(key)[1].mean) / 2.
+        else:
+            delta = (self.C.succ_item(key)[1].mean - c_i.mean) / 2.
+        z = max(-1, (q - c_i.mean) / delta)
+
+        if z < 1:
+            return t / N + c_i.count / N * (z + 1) / 2
+
+        t += c_i.count
+    return 1
+*/
+  // size_t t = 0;
+
+  return 1.0f;
+}
+
+/**
+ * Computes the mean of the distribution between the two percentiles q1 and q2.
+ * This is a modified algorithm than the one presented in the original t-Digest paper.
+ */
+double trimmed_mean(tdigest_t *self, double q1, double q2)
+{
+/*
+def trimmed_mean(self, q1, q2):
+    if not (q1 < q2):
+        raise ValueError("q must be between 0 and 1, inclusive.")
+
+    s = k = t = 0
+    q1 *= self.n
+    q2 *= self.n
+    for i, key in enumerate(self.C.keys()):
+        c_i = self.C[key]
+        k_i = c_i.count
+        if q1 < t + k_i:
+            if i == 0:
+                delta = self.C.succ_item(key)[1].mean - c_i.mean
+            elif i == len(self) - 1:
+                delta = c_i.mean - self.C.prev_item(key)[1].mean
+            else:
+                delta = (self.C.succ_item(key)[1].mean - self.C.prev_item(key)[1].mean) / 2.
+            nu = ((q1 - t) / k_i - 0.5) * delta
+            s += nu * k_i * c_i.mean
+            k += nu * k_i
+
+        if q2 < t + k_i:
+            return s/k
+        t += k_i
+
+    return s/k
+*/
+  return 1.0f;
+}

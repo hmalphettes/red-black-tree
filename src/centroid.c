@@ -14,6 +14,10 @@ void centroid_update(centroid_t *centroid, double x, int delta_weight)
 
 void centroid_print(centroid_t *centroid)
 {
+  if (!centroid) {
+    printf("<Centroid NULL>\n");
+    return;
+  }
 	printf("<Centroid: mean=%.8f, weight=%d>\n", centroid->mean, centroid->weight);
 }
 
@@ -164,11 +168,9 @@ void centroidset_printset(centroidset_t *centroidset)
 	rbtrav = jsw_rbtnew();
 
 	centroid = jsw_rbtfirst(rbtrav, centroidset);
-  centroid_print(centroid);
-
-	while ((centroid = jsw_rbtnext(rbtrav)) != NULL) {
+	do {
 		centroid_print(centroid);
-	}
+	} while ((centroid = jsw_rbtnext(rbtrav)) != NULL);
   jsw_rbtdelete(rbtrav);
 }
 
@@ -188,14 +190,13 @@ centroid_t * centroidset_values(centroidset_t *centroidset)
 
 	centroid_t *centroid;
 	centroid = jsw_rbtfirst(rbtrav, centroidset);
-  centroid_arr[0] = *centroid;
-
-  int i = 1;
-	while ((centroid = jsw_rbtnext(rbtrav)) != NULL) {
+  int i = 0;
+	do {
 		centroid_arr[i] = *centroid;
     i++;
-	}
+	} while ((centroid = jsw_rbtnext(rbtrav)) != NULL);
   jsw_rbtdelete(rbtrav);
+
   return centroid_arr;
 }
 

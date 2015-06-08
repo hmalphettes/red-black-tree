@@ -77,6 +77,8 @@ void          jsw_rbdelete ( jsw_rbtree_t *tree );
 void         *jsw_rbfind ( jsw_rbtree_t *tree, void *data );
 void         *jsw_rbfind_ceiling ( jsw_rbtree_t *tree, void *data );
 void         *jsw_rbfind_floor ( jsw_rbtree_t *tree, void *data );
+void         *jsw_rbfind_first ( jsw_rbtree_t *tree );
+void         *jsw_rbfind_last ( jsw_rbtree_t *tree );
 jsw_rbclosest_t jsw_rbfind_closest (const jsw_rbtree_t *tree, const void *data);
 int           jsw_rbinsert ( jsw_rbtree_t *tree, void *data );
 int           jsw_rberase ( jsw_rbtree_t *tree, void *data );
@@ -89,6 +91,8 @@ void         *jsw_rbtfirst ( jsw_rbtrav_t *trav, jsw_rbtree_t *tree );
 void         *jsw_rbtlast ( jsw_rbtrav_t *trav, jsw_rbtree_t *tree );
 void         *jsw_rbtnext ( jsw_rbtrav_t *trav );
 void         *jsw_rbtprev ( jsw_rbtrav_t *trav );
+void         *jsw_rbtpeeknext ( jsw_rbtrav_t *trav );
+void         *jsw_rbtpeekprev ( jsw_rbtrav_t *trav );
 
 #ifdef __cplusplus
 }

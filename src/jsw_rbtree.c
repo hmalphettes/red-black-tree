@@ -317,6 +317,26 @@ jsw_rbclosest_t jsw_rbfind_closest ( const jsw_rbtree_t *tree, const void *data 
   }
 }
 
+static void *find_first_last (jsw_rbtree_t *tree, int dir )
+{
+  jsw_rbnode_t *node = tree->root;
+  while ( node->link[dir] != NULL ) {
+    node = node->link[dir];
+  }
+
+  return node == NULL ? NULL : node->data;
+}
+
+void *jsw_rbfind_first (jsw_rbtree_t *tree )
+{
+  return find_first_last(tree, 0);
+}
+
+void *jsw_rbfind_last (jsw_rbtree_t *tree )
+{
+  return find_first_last(tree, 1);
+}
+
 
 /**
   <summary>
@@ -674,4 +694,56 @@ void *jsw_rbtnext ( jsw_rbtrav_t *trav )
 void *jsw_rbtprev ( jsw_rbtrav_t *trav )
 {
   return move ( trav, 0 ); /* Toward smaller items */
+}
+
+static void *peek ( jsw_rbtrav_t *trav, int dir )
+{
+  jsw_rbnode_t *next;
+  if ( trav->it->link[dir] != NULL ) {
+    /* Continue down this branch */
+    next = trav->it->link[dir];
+
+    while ( next->link[!dir] != NULL ) {
+      next = next->link[!dir];
+    }
+  }
+  else {
+    /* Move to the next branch */
+    jsw_rbnode_t *last;
+
+    do {
+      if ( trav->top == 0 ) {
+        return NULL;
+      }
+
+      last = trav->it;
+      next = trav->path[trav->top - 1];
+    } while ( last == trav->it->link[dir] );
+  }
+
+  return next == NULL ? NULL : next->data;
+}
+
+/**
+  <summary>
+  Get to the next value in ascending order. Does not change the state of the traversal.
+  <summary>
+  <param name="trav">The initialized traversal object</param>
+  <returns>A pointer to the next value in ascending order</returns>
+ */
+void *jsw_rbtpeeknext ( jsw_rbtrav_t *trav )
+{
+  return peek(trav, 1);
+}
+
+/**
+  <summary>
+  Get to the next value in descending order. Does not change the state of the traversal.
+  <summary>
+  <param name="trav">The initialized traversal object</param>
+  <returns>A pointer to the next value in descending order</returns>
+ */
+void *jsw_rbtpeekprev ( jsw_rbtrav_t *trav )
+{
+  return peek(trav, 0);
 }
