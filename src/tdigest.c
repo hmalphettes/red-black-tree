@@ -2,6 +2,7 @@
 #include "jsw_rbtree.h"
 #include "centroid.h"
 #include "centroid.c"
+#include <math.h>
 // #include <stdlib.h>
 
 tdigest_t *tdigest_new(double delta, int compression)
@@ -13,6 +14,11 @@ tdigest_t *tdigest_new(double delta, int compression)
   tdigest->centroidset = centroidset_new();
 
 	return tdigest;
+}
+
+tdigest_t *tdigest_new_default()
+{
+  return tdigest_new(0.01f, 25.0f);
 }
 
 static void tdigest__update_centroid(tdigest_t * self, centroid_t *centroid, double x, int w)
@@ -82,10 +88,14 @@ static void tdigest_compress(tdigest_t * self) {
 void tdigest_update(tdigest_t * tdigest, double x, const size_t w) {
   tdigest->count += w;
   if (w == tdigest->count) { // no node yet in the tdigest.
+    printf("Adding a new node\n");
     centroidset_weighted_insert(tdigest->centroidset, x, w);
     return;
   }
+  printf("Getting the centroidset_closest %f\n", x);
   centroid_pair_t closest_centroids = centroidset_closest(tdigest->centroidset, x);
+  printf("Got the centroidset_closest\n");
+  centroid_pair_print(closest_centroids);
 
   static bool seeded = false;
   if (!seeded) {
@@ -103,6 +113,7 @@ void tdigest_update(tdigest_t * tdigest, double x, const size_t w) {
         break; // no more things to do.
       }
       centroid = closest_centroids.data0;
+      closest_centroids.data0 = NULL;
     } else if (closest_centroids.data0 != NULL) {
       const int random_bit = rand() & 1;
       if (random_bit == 0) {
@@ -116,7 +127,8 @@ void tdigest_update(tdigest_t * tdigest, double x, const size_t w) {
       centroid = closest_centroids.data1;
       closest_centroids.data1 = NULL;
     }
-
+// printf("(w_d %f)\n", w_d);
+// centroid_print(centroid);
     double q = _compute_centroid_quantile(tdigest, centroid);
 
     // This filters the out centroids that do not satisfy the second part
@@ -127,10 +139,7 @@ void tdigest_update(tdigest_t * tdigest, double x, const size_t w) {
     }
 
     // delta_w = min(self._theshold(q) - c_j.count, w_d)
-    double delta_w = threshold - centroid->weight;
-    if (delta_w > w_d) {
-      delta_w = w_d;
-    }
+    double delta_w = fmin(threshold - centroid->weight, w_d);
 
     tdigest__update_centroid(tdigest, centroid, x, delta_w);
     w_d -= delta_w;
@@ -168,7 +177,7 @@ tdigest_t * tdigest__add(tdigest_t *self, tdigest_t *other_digest)
  * Computes the percentile of a specific value in [0,1], ie. computes F^{-1}(q) where F^{-1} denotes
  * the inverse CDF of the distribution.
  */
-double percentile(tdigest_t *self, double q)
+double tdigest_percentile(tdigest_t *self, double q)
 {
   if (q < 0 || q >1) {
     printf("Invalid argument to request a percentile: %f must be between 0 and 1, inclusive.", q);
@@ -231,7 +240,7 @@ double percentile(tdigest_t *self, double q)
  * Computes the quantile of a specific value, ie. computes F(q) where F denotes
  * the CDF of the distribution.
  */
-double quantile(tdigest_t *self, double q) {
+double tdigest_quantile(tdigest_t *self, double q) {
 /*def quantile(self, q):
     t = 0
     N = float(self.n)
@@ -250,7 +259,36 @@ double quantile(tdigest_t *self, double q) {
         t += c_i.count
     return 1
 */
-  // size_t t = 0;
+  double t = 0;
+  double N = self->count;
+  double delta;
+
+  centroidset_t *tree = self->centroidset;
+  size_t max_ind = centroidset_size(tree) -1;
+
+	jsw_rbtrav_t *rbtrav;
+	rbtrav = jsw_rbtnew();
+
+  centroid_t *centroid;
+	centroid = jsw_rbtfirst(rbtrav, tree);
+  size_t i = 0;
+	do {
+    if (i == max_ind) {
+      delta = (centroid->mean - ((centroid_t *)jsw_rbtpeekprev(rbtrav))->mean ) / 2.0f;
+    } else {
+      delta = ( ( (centroid_t *)jsw_rbtpeeknext(rbtrav) )->mean - centroid->mean) / 2.0f;
+    }
+    double z = fmax(-1, (q - centroid->mean) / delta);
+    if (z < -1) { // this looks so wrong. why would it ever be less than -1 when
+      // we picked the max between a value and -1.
+      // time to read the original paper again.
+      return t / N + centroid->mean / N * (z + 1) / 2;
+    }
+    t += centroid->weight;
+    i++;
+	} while ((centroid = jsw_rbtnext(rbtrav)) != NULL);
+  jsw_rbtdelete(rbtrav);
+
 
   return 1.0f;
 }
@@ -259,8 +297,8 @@ double quantile(tdigest_t *self, double q) {
  * Computes the mean of the distribution between the two percentiles q1 and q2.
  * This is a modified algorithm than the one presented in the original t-Digest paper.
  */
-double trimmed_mean(tdigest_t *self, double q1, double q2)
-{
+// double tdigest_trimmed_mean(tdigest_t *self, double q1, double q2)
+// {
 /*
 def trimmed_mean(self, q1, q2):
     if not (q1 < q2):
@@ -289,5 +327,5 @@ def trimmed_mean(self, q1, q2):
 
     return s/k
 */
-  return 1.0f;
-}
+//   return 1.0f;
+// }
