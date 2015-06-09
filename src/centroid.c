@@ -170,6 +170,7 @@ void centroidset_printset(centroidset_t *centroidset)
 	centroid = jsw_rbtfirst(rbtrav, centroidset);
 	do {
 		centroid_print(centroid);
+    if (!centroid) { break; }
 	} while ((centroid = jsw_rbtnext(rbtrav)) != NULL);
   jsw_rbtdelete(rbtrav);
 }
