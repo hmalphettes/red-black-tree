@@ -91,8 +91,12 @@ int main()
 	assert(c == f);
 	f = jsw_rbtpeekprev(rbtrav);
 	assert(f == first);
+	c = jsw_rbtpeekprev(rbtrav);
+	assert(c == first);
 	jsw_rbtdelete(rbtrav);
 
 
 	centroidset_delete(centroidset);
+
+	return 0;
 }
