@@ -28,10 +28,15 @@ build/lib/libjsw_rbtree.a: $(OBJS)
 	$(AR) -crs $@ $^
 
 clean:
-	rm -fr *.o build test-centroid test-centroid.dSYM src/*.o
+	rm -fr *.o build test-centroid test-tdigest *.dSYM src/*.o
 
 test-centroid: build
 	$(CC) $(CFLAGS) -Ibuild/include -o test-centroid test-centroid.c -Lbuild/lib -ljsw_rbtree
+
+test-tdigest: build
+	$(CC) $(CFLAGS) -Ibuild/include -o test-tdigest test-tdigest.c -Lbuild/lib -ljsw_rbtree
+
+tests: test-centroid test-tdigest
 
 install: all
 	mkdir -p $(PREFIX)/include/jsw_rbtree
