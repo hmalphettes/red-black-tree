@@ -13,11 +13,11 @@ typedef struct centroid
 
 typedef struct jsw_rbtree centroidset_t;
 
-typedef struct centroid_pair
-{
-  centroid_t     *data0;
-  centroid_t     *data1;
-} centroid_pair_t;
+// typedef struct centroid_pair
+// {
+//   centroid_t     *data0;
+//   centroid_t     *data1;
+// } centroid_pair_t;
 
 void seed_srand() {
   static int seeded = 0;

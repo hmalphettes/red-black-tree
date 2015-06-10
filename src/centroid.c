@@ -45,31 +45,42 @@ static int centroid_cmp(const void *p1, const void *p2)
  *
  * When plt and gpt are at equal distance we assign to the return pointers plt and pgt and return NULL
  */
-static jsw_rbclosest_t centroid_closest(const void *p0, const void *plt, const void *pgt)
+static void centroid_closest(const void *p0, const void *plt, const void *pgt, void *data0, void *data1)
 {
 	centroid_t *cntrd_0, *cntrd_lt, *cntrd_gt;
 
 	cntrd_0 = (centroid_t*)p0;
 	cntrd_lt = (centroid_t*)plt;
+  if (!pgt) {
+    centroid_t *d0;
+	  d0 = (centroid_t *)data0;
+    *d0 = *cntrd_lt;
+    return;
+  }
 	cntrd_gt = (centroid_t*)pgt;
 
   double gt_diff = cntrd_gt->mean - cntrd_0->mean;
   double lt_diff = cntrd_0->mean - cntrd_lt->mean;
 // TODO: do we need to use epsilon for approximately equal comparisons?
 // refer to the original tdigest java source where this type of issue was fixed.
-  jsw_rbclosest_t res;
   if (lt_diff > gt_diff) {
-    res.data0 = pgt;
-    res.data1 = NULL;
+    centroid_t *d0;
+	  d0 = (centroid_t *)data0;
+    *d0 = *cntrd_gt;
+    // *d1 = NULL;
   } else if (lt_diff < gt_diff) {
-    res.data0 = plt;
-    res.data1 = NULL;
+    centroid_t *d0;
+	  d0 = (centroid_t *)data0;
+    *d0 = *cntrd_lt;
+    // *data1 = NULL;
   } else {
     //equi-distance
-    res.data0 = plt;
-    res.data1 = pgt;
+    centroid_t *d0, *d1;
+	  d0 = (centroid_t *)data0;
+	  d1 = (centroid_t *)data1;
+    *d0 = *cntrd_lt;
+    *d1 = *cntrd_gt;
   }
-  return res;
 }
 
 static void *centroid_dup(void *p)
@@ -246,28 +257,16 @@ centroid_t* centroidset_ceiling(centroidset_t *centroidset, double x)
 	return centroid;
 }
 
-void centroid_pair_print(centroid_pair_t pair) {
-  centroid_print(pair.data0);
-  if (pair.data1 != NULL) {
-    centroid_print(pair.data1);
-  }
-}
-
-
 /**
  *
  */
-centroid_pair_t centroidset_closest(centroidset_t *centroidset, double x)
+void centroidset_closest(centroidset_t *centroidset, double x, centroid_t *data0, centroid_t *data1)
 {
 	centroid_t centroid_find;
+  // centroid_t *centroid_find = (centroid_t *)malloc ( sizeof *rt );
 
 	centroid_find.mean = x;
-	jsw_rbclosest_t res = jsw_rbfind_closest(centroidset, &centroid_find);
-
-  centroid_pair_t cres;
-  cres.data0 = (centroid_t *)res.data0;
-  cres.data1 = (centroid_t *)res.data1;
-	return cres;
+	jsw_rbfind_closest(centroidset, &centroid_find, data0, data1);
 }
 
 /*

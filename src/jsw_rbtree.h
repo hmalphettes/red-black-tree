@@ -28,11 +28,6 @@ extern "C" {
 #include <stddef.h>
 #endif
 
-typedef struct jsw_rbclosest {
-  const void              *data0; /* User defined payload */
-  const void              *data1; /* User defined payload or NULL */
-} jsw_rbclosest_t;
-
 /* Opaque types */
 typedef struct jsw_rbtree jsw_rbtree_t;
 typedef struct jsw_rbtrav jsw_rbtrav_t;
@@ -41,7 +36,7 @@ typedef struct jsw_rbtrav jsw_rbtrav_t;
 typedef int   (*cmp_f) ( const void *p1, const void *p2 );
 typedef void *(*dup_f) ( void *p );
 typedef void  (*rel_f) ( void *p );
-typedef jsw_rbclosest_t (*closest_f) (const void *p0, const void *p1, const void *p2 );
+typedef void (*closest_f) (const void *p0, const void *plt, const void *pgt, void *data0, void *data1);
 
 /** moved from the implementation so we can reuse those in tdigest.c */
 #ifndef HEIGHT_LIMIT
@@ -79,7 +74,7 @@ void         *jsw_rbfind_ceiling ( jsw_rbtree_t *tree, void *data );
 void         *jsw_rbfind_floor ( jsw_rbtree_t *tree, void *data );
 void         *jsw_rbfind_first ( jsw_rbtree_t *tree );
 void         *jsw_rbfind_last ( jsw_rbtree_t *tree );
-jsw_rbclosest_t jsw_rbfind_closest (const jsw_rbtree_t *tree, const void *data);
+void          jsw_rbfind_closest (const jsw_rbtree_t *tree, const void *data, void *data0, void *data1);
 int           jsw_rbinsert ( jsw_rbtree_t *tree, void *data );
 int           jsw_rberase ( jsw_rbtree_t *tree, void *data );
 size_t        jsw_rbsize ( jsw_rbtree_t *tree );
