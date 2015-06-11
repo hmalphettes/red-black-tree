@@ -52,17 +52,21 @@ int main()
 	centroidset_closest(centroidset, 1.8, &data0, &data1);
   printf("closest to 1.8: ");
   centroid_print(&data0);
-	assert (data0.mean == 2.0f);
-/*	p = centroidset_closest(centroidset, 1.7);
+	assert(data0.mean == 2.0f);
+	data0 = (const centroid_t){ .weight= 0 };
+	data1 = (const centroid_t){ .weight= 0 };
+  centroidset_closest(centroidset, 1.7, &data0, &data1);
   printf("closest to 1.7: ");
-  centroid_pair_print(p);
-	assert (p.data0->mean == 1.5f);
+  centroid_print(&data0);
+	assert (data0.mean == 1.5f);
   printf("closest to 1.75: ");
-	p = centroidset_closest(centroidset, 1.75);
-  centroid_pair_print(p);
-	assert (p.data0->mean == 1.5f);
-	assert (p.data1->mean == 2.0f);
-	*/
+	data0 = (const centroid_t){ .weight= 0 };
+	data1 = (const centroid_t){ .weight= 0 };
+	centroidset_closest(centroidset, 1.75, &data0, &data1);
+  centroid_print(&data0);
+  centroid_print(&data1);
+	assert (data0.mean == 1.5f);
+	assert (data1.mean == 2.0f);
 
 	// Test find_first find_last
 	c= (centroid_t*) jsw_rbfind_last(centroidset);
