@@ -93,9 +93,10 @@ void tdigest_update(tdigest_t * tdigest, double x, const size_t w) {
     return;
   }
   printf("Getting the centroidset_closest %f\n", x);
-  centroid_pair_t closest_centroids = centroidset_closest(tdigest->centroidset, x);
+	centroid_t data0 = { .weight=0 }, data1 = { .weight=0 };
+  centroidset_closest(tdigest->centroidset, x, &data0, &data1);
   printf("Got the centroidset_closest\n");
-  centroid_pair_print(closest_centroids);
+  centroid_print(&data0);
 
   static bool seeded = false;
   if (!seeded) {
@@ -105,27 +106,34 @@ void tdigest_update(tdigest_t * tdigest, double x, const size_t w) {
   double w_d = w;
 
   centroid_t *centroid;
+  int i;
+  if (data1.weight != 0) {
+    i = 2;
+  } else if (data0.weight != 0) {
+    i = 1;
+  } else {
+    i = 0;
+  }
   while (w_d > 0) {
     // choose one of the 2 centroids - randomly if there are 2 of them.
-    if (closest_centroids.data1 == NULL) {
-      if (closest_centroids.data0 == NULL) {
-        centroidset_weighted_insert(tdigest->centroidset, x, w_d);
-        break; // no more things to do.
-      }
-      centroid = closest_centroids.data0;
-      closest_centroids.data0 = NULL;
-    } else if (closest_centroids.data0 != NULL) {
+    if (i == 0) {
+      centroidset_weighted_insert(tdigest->centroidset, x, w_d);
+      break;
+    } else if (i == 1) {
+      centroid = &data0;
+    } else if (i == 3) {
+      centroid = &data1;
+    } else if (i == 2) {
       const int random_bit = rand() & 1;
       if (random_bit == 0) {
-        centroid = closest_centroids.data0;
-        closest_centroids.data0 = NULL;
+        centroid = &data0;
+        i = 3;
       } else {
-        centroid = closest_centroids.data1;
-        closest_centroids.data1 = NULL;
+        centroid = &data1;
+        i = 1;
       }
     } else {
-      centroid = closest_centroids.data1;
-      closest_centroids.data1 = NULL;
+      centroid = &data1;
     }
 // printf("(w_d %f)\n", w_d);
 // centroid_print(centroid);
