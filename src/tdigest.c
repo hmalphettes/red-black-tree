@@ -13,19 +13,41 @@ tdigest_t *tdigest_new(double delta, int compression)
   tdigest->delta = delta;
   tdigest->centroidset = centroidset_new();
 
+  static bool seeded = false;
+  if (!seeded) {
+    seed_srand();
+  }
+
 	return tdigest;
 }
 
 tdigest_t *tdigest_new_default()
 {
-  return tdigest_new(0.01f, 25.0f);
+  return tdigest_new(0.01f, 100);
+}
+
+void tdigest__add_centroid(tdigest_t *self, centroid_t *centroid) {
+  /*
+    def _add_centroid(self, centroid):
+        if centroid.mean not in self.C:
+            self.C.insert(centroid.mean, centroid)
+        else:
+            self.C[centroid.mean].update(centroid.mean, centroid.count)
+  */
+  centroid_t *found;
+  found = (centroid_t *)jsw_rbfind(self->centroidset, centroid);
+  if (found) {
+    found->weight += centroid->weight;
+  } else {
+    jsw_rbinsert(self->centroidset, (void *)centroid);
+  }
 }
 
 static void tdigest__update_centroid(tdigest_t * self, centroid_t *centroid, double x, int w)
 {
   centroidset_pop(self->centroidset, centroid);
   centroid_update(centroid, x, w);
-  centroidset_weighted_insert(self->centroidset, x, w);
+  tdigest__add_centroid(self, centroid); // centroidset_weighted_insert(self->centroidset, x, w);
 }
 
 static double _threshold(tdigest_t *self, double q)
@@ -88,22 +110,17 @@ static void tdigest_compress(tdigest_t * self) {
 void tdigest_update(tdigest_t * tdigest, double x, const size_t w) {
   tdigest->count += w;
   if (w == tdigest->count) { // no node yet in the tdigest.
-    printf("Adding a new node\n");
     centroidset_weighted_insert(tdigest->centroidset, x, w);
     return;
   }
-  printf("Getting the centroidset_closest %f\n", x);
+  // printf("Getting the centroidset_closest %f\n", x);
 	centroid_t data0 = { .weight=0 }, data1 = { .weight=0 };
+	// centroid_t data0, data1;
   centroidset_closest(tdigest->centroidset, x, &data0, &data1);
-  printf("Got the centroidset_closest\n");
-  centroid_print(&data0);
+  // printf("Got the centroidset_closest\n");
+  // centroid_print(&data0);
 
-  static bool seeded = false;
-  if (!seeded) {
-    seed_srand();
-  }
-
-  double w_d = w;
+  size_t w_d = w;
 
   centroid_t *centroid;
   int i;
@@ -114,15 +131,18 @@ void tdigest_update(tdigest_t * tdigest, double x, const size_t w) {
   } else {
     i = 0;
   }
-  while (w_d > 0) {
+  while (w_d > 0 && i != 4) {
+    // printf("i %i; w_d %f\n", i, w_d);
     // choose one of the 2 centroids - randomly if there are 2 of them.
     if (i == 0) {
       centroidset_weighted_insert(tdigest->centroidset, x, w_d);
       break;
     } else if (i == 1) {
       centroid = &data0;
+      i = 4;
     } else if (i == 3) {
       centroid = &data1;
+      i = 4;
     } else if (i == 2) {
       const int random_bit = rand() & 1;
       if (random_bit == 0) {
@@ -135,11 +155,9 @@ void tdigest_update(tdigest_t * tdigest, double x, const size_t w) {
     } else {
       centroid = &data1;
     }
-// printf("(w_d %f)\n", w_d);
-// centroid_print(centroid);
     double q = _compute_centroid_quantile(tdigest, centroid);
 
-    // This filters the out centroids that do not satisfy the second part
+    // This filters out centroids that do not satisfy the second part
     // of the definition of S. See original paper by Dunning.
     double threshold = _threshold(tdigest, q);
     if (centroid->weight + w_d > threshold) {
@@ -153,11 +171,21 @@ void tdigest_update(tdigest_t * tdigest, double x, const size_t w) {
     w_d -= delta_w;
   }
 
-  if (tdigest->count > tdigest->compression / tdigest->delta) {
-    tdigest_compress(tdigest);
+
+  if (w_d > 0) {
+    centroid_t ncentroid = { .weight=w_d, .mean=x };
+    tdigest__add_centroid(tdigest, &ncentroid);
+  }
+  if (tdigest->centroidset->size > tdigest->compression / tdigest->delta) {
+    printf("Compressing %zu > %f / %f > \n", tdigest->centroidset->size, tdigest->compression, tdigest->delta);
+    // tdigest_compress(tdigest);
   }
 }
 
+/**
+ * TODO: this is meant as the overloading of '+' in the original python code.
+ * TODO: find out where it is used.
+ */
 tdigest_t * tdigest__add(tdigest_t *self, tdigest_t *other_digest)
 {
   size_t s1 = centroidset_size(self->centroidset);

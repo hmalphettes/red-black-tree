@@ -8,7 +8,7 @@ typedef struct tdigest
   centroidset_t *centroidset;
   size_t            count;
   double            delta;
-  int               compression;
+  double            compression;
 } tdigest_t;
 
 tdigest_t   *tdigest_new_default();

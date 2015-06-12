@@ -285,13 +285,15 @@ void jsw_rbfind_closest ( const jsw_rbtree_t *tree, const void *data, void *data
 {
   jsw_rbnode_t *it = tree->root;
   void *lesser = NULL, *bigger = NULL;
-
+  int i = 0;
   while ( it != NULL ) {
+    i++;
     int cmp = tree->cmp ( it->data, data );
 
     if (cmp == 0) {
       lesser = it->data;
-      break;
+      tree->closest(data, lesser, NULL, data0, data1);
+      return;
     } else if (cmp < 0) {
       lesser = it->data;
     } else {

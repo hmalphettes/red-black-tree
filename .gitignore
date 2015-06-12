@@ -5,3 +5,4 @@
 *.sw*
 /build
 test-centroid
+test-tdigest

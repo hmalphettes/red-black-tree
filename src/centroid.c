@@ -6,10 +6,12 @@
 #include <math.h>
 #include <stdbool.h>
 
-void centroid_update(centroid_t *centroid, double x, int delta_weight)
+static double DBL_EPSILON = 2.220446e-15;//2.220446e-16;
+
+void centroid_update(centroid_t *centroid, double x, int weight)
 {
-  centroid->weight += delta_weight;
-  centroid->mean += delta_weight * (x - centroid->mean) / centroid->weight;
+  centroid->weight += weight;
+  centroid->mean += weight * (x - centroid->mean) / centroid->weight;
 }
 
 void centroid_print(centroid_t *centroid)
@@ -29,11 +31,17 @@ static int centroid_cmp(const void *p1, const void *p2)
 	centroid2 = (centroid_t*)p2;
 
   // return centroid1->mean - centroid2->mean;
-	if (centroid1->mean > centroid2->mean)
+	if (centroid1->mean > centroid2->mean) {
+    if (centroid2->mean + DBL_EPSILON >= centroid1->mean) {
+      return 0;
+    }
 		return 1;
-
-	else if (centroid1->mean < centroid2->mean)
+  } else if (centroid1->mean < centroid2->mean) {
+    if (centroid1->mean + DBL_EPSILON >= centroid2->mean) {
+      return 0;
+    }
 		return -1;
+  }
 
 	return 0;
 }
@@ -50,17 +58,24 @@ static void centroid_closest(const void *p0, const void *plt, const void *pgt, v
 	centroid_t *cntrd_0, *cntrd_lt, *cntrd_gt;
 
 	cntrd_0 = (centroid_t*)p0;
-	cntrd_lt = (centroid_t*)plt;
+  if (!plt) {
+    centroid_t *d0;
+	  d0 = (centroid_t *)data0;
+    *d0 = *(centroid_t*)pgt;
+    return;
+  }
   if (!pgt) {
     centroid_t *d0;
 	  d0 = (centroid_t *)data0;
-    *d0 = *cntrd_lt;
+    *d0 = *(centroid_t*)plt;
     return;
   }
+	cntrd_lt = (centroid_t*)plt;
 	cntrd_gt = (centroid_t*)pgt;
 
   double gt_diff = cntrd_gt->mean - cntrd_0->mean;
   double lt_diff = cntrd_0->mean - cntrd_lt->mean;
+
 // TODO: do we need to use epsilon for approximately equal comparisons?
 // refer to the original tdigest java source where this type of issue was fixed.
   if (lt_diff > gt_diff) {
@@ -188,7 +203,11 @@ void centroidset_printset(centroidset_t *centroidset)
 
 void centroidset_pop(centroidset_t *centroidset, centroid_t *centroid)
 {
-  jsw_rberase(centroidset, centroid);
+  // jsw_rberase(centroidset, centroid);
+	int ret = jsw_rberase(centroidset, (void*)centroid);
+	if (ret == 0) {
+		printf("failed to pop the centroid with mean %f\n", centroid->mean);
+	}
 }
 
 centroid_t * centroidset_values(centroidset_t *centroidset)
@@ -262,10 +281,10 @@ centroid_t* centroidset_ceiling(centroidset_t *centroidset, double x)
  */
 void centroidset_closest(centroidset_t *centroidset, double x, centroid_t *data0, centroid_t *data1)
 {
-	centroid_t centroid_find;
+	centroid_t centroid_find = { .mean=x, .weight=1 };
   // centroid_t *centroid_find = (centroid_t *)malloc ( sizeof *rt );
 
-	centroid_find.mean = x;
+	// centroid_find.mean = x;
 	jsw_rbfind_closest(centroidset, &centroid_find, data0, data1);
 }
 
