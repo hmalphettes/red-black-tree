@@ -10,31 +10,27 @@ int main()
   seed_srand();
 
   tdigest_t * tdigest;
-  tdigest = tdigest_new(0.01f, 20);//tdigest_new_default();
-  centroidset_printset(tdigest->centroidset);
+  tdigest = tdigest_new_default();//tdigest_new(0.01, 25);
 
-// crash
   // tdigest_update(tdigest, 0.26059413, 1);
   // tdigest_update(tdigest, 0.336455, 1);
   // tdigest_update(tdigest, 0.118310, 1);
   // tdigest_update(tdigest, 0.706089, 1);
   // tdigest_update(tdigest, 0.806067, 1);
   // tdigest_update(tdigest, 0.909876, 1);
-// --crash
 
-// infinite loop?
   // tdigest_update(tdigest, 0.898033, 1);
   // tdigest_update(tdigest, 0.70146493, 1);
-// --infinite loop?
 
-  size_t l = 2010;
+  size_t l = 12001;
   for (size_t i = 0; i < l-1; i++) {
-    // printf("UPNG\n");
     tdigest_update(tdigest, drand48(), 1);
-  // centroidset_printset(tdigest->centroidset);
-  // printf("size_t i %zu\n", i);
   }
-  // tdigest_compress(tdigest);
+  printf("Before compressing %zu\n", tdigest->centroidset->size);
+  tdigest_compress(tdigest);
+  printf("After compressing %zu\n", tdigest->centroidset->size);
+
+  // centroidset_printset(tdigest->centroidset);
 
   double tp = tdigest_percentile(tdigest, 0.5f);
   printf("tdigest_percentile 0.5 %f err: %f\n", tp, fabs(tp - 0.5));

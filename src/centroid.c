@@ -6,7 +6,11 @@
 #include <math.h>
 #include <stdbool.h>
 
-static double DBL_EPSILON = 2.220446e-15;//2.220446e-16;
+// For t-digests experience so far shows that there is no difference
+// comparing doubles for exact equality of not: it intuitively makes sense
+// as centroids that are sufficeiently near to each other are eventually merged unless
+// they  have a very big difference in weight.
+// static double DBL_EPSILON = 2.220446e-16;
 
 void centroid_update(centroid_t *centroid, double x, int weight)
 {
@@ -29,17 +33,15 @@ static int centroid_cmp(const void *p1, const void *p2)
 
 	centroid1 = (centroid_t*)p1;
 	centroid2 = (centroid_t*)p2;
-
-  // return centroid1->mean - centroid2->mean;
 	if (centroid1->mean > centroid2->mean) {
-    if (centroid2->mean + DBL_EPSILON >= centroid1->mean) {
-      return 0;
-    }
+    // if (centroid2->mean + DBL_EPSILON >= centroid1->mean) {
+    //   return 0;
+    // }
 		return 1;
   } else if (centroid1->mean < centroid2->mean) {
-    if (centroid1->mean + DBL_EPSILON >= centroid2->mean) {
-      return 0;
-    }
+    // if (centroid1->mean + DBL_EPSILON >= centroid2->mean) {
+    //   return 0;
+    // }
 		return -1;
   }
 
@@ -126,19 +128,11 @@ void centroidset_delete(centroidset_t *centroidset)
 	jsw_rbdelete(centroidset);
 }
 
-int centroidset_weighted_insert(centroidset_t *centroidset, double mean, int weight)
+int centroidset_insert(centroidset_t *centroidset, centroid_t *centroid)
 {
-	int ret;
-
-	centroid_t *centroid;
-	centroid = calloc(1, sizeof(centroid_t));
-
-	centroid->mean = mean;
-	centroid->weight = weight;
-
-	ret = jsw_rbinsert(centroidset, (void *)centroid);
+	int ret = jsw_rbinsert(centroidset, (void *)centroid);
 	if (ret == 0) {
-		printf("failed to insert the centroid with mean %f and weight %d\n", mean, weight);
+		printf("failed to insert the centroid with mean %f and weight %d\n", centroid->mean, centroid->weight);
 		free(centroid);
 		return -1;
 	}
@@ -146,9 +140,15 @@ int centroidset_weighted_insert(centroidset_t *centroidset, double mean, int wei
 	return 0;
 }
 
-int centroidset_insert(centroidset_t *centroidset, double mean)
+int centroidset_weighted_insert(centroidset_t *centroidset, double mean, int weight)
 {
-	return centroidset_weighted_insert(centroidset, mean, 1);
+	centroid_t *centroid;
+	centroid = calloc(1, sizeof(centroid_t));
+
+	centroid->mean = mean;
+	centroid->weight = weight;
+
+  return centroidset_insert(centroidset, centroid);
 }
 
 int centroidset_erase(centroidset_t *centroidset, double mean)
@@ -183,6 +183,7 @@ double centroidset_find(centroidset_t *centroidset, double mean)
 
 void centroidset_printset(centroidset_t *centroidset)
 {
+  int c = 0;
   if (centroidset == NULL) {
     printf("NULL");
     return;
@@ -195,6 +196,7 @@ void centroidset_printset(centroidset_t *centroidset)
 
 	centroid = jsw_rbtfirst(rbtrav, centroidset);
 	do {
+    printf("%d ", c++);
 		centroid_print(centroid);
     if (!centroid) { break; }
 	} while ((centroid = jsw_rbtnext(rbtrav)) != NULL);
@@ -203,8 +205,7 @@ void centroidset_printset(centroidset_t *centroidset)
 
 void centroidset_pop(centroidset_t *centroidset, centroid_t *centroid)
 {
-  // jsw_rberase(centroidset, centroid);
-	int ret = jsw_rberase(centroidset, (void*)centroid);
+  int ret = jsw_rberase(centroidset, (void*)centroid);
 	if (ret == 0) {
 		printf("failed to pop the centroid with mean %f\n", centroid->mean);
 	}
@@ -281,41 +282,34 @@ centroid_t* centroidset_ceiling(centroidset_t *centroidset, double x)
  */
 void centroidset_closest(centroidset_t *centroidset, double x, centroid_t *data0, centroid_t *data1)
 {
+	// centroid_t centroid_find;
+	// centroid_find.mean = x;
 	centroid_t centroid_find = { .mean=x, .weight=1 };
   // centroid_t *centroid_find = (centroid_t *)malloc ( sizeof *rt );
 
-	// centroid_find.mean = x;
 	jsw_rbfind_closest(centroidset, &centroid_find, data0, data1);
 }
 
-/*
-
-int main()
-{
-	centroidset_t *centroidset;
-	centroidset = centroidset_new();
-	centroidset_insert(centroidset, 1.0);
-	centroidset_insert(centroidset, 2.0);
-	centroidset_insert(centroidset, 1.5);
-	centroidset_weighted_insert(centroidset, 9.9, 3);
-	centroidset_insert(centroidset, 1.8);
-	centroidset_insert(centroidset, 3.3);
-	double ret;
-	ret = centroidset_find(centroidset, 1.0f);
-	printf("find 1.0: %f\n", ret);
-	ret = centroidset_find(centroidset, 9.900000);
-	printf("find 9.9: %f\n", ret);
-	ret = centroidset_find(centroidset, 1.800000);
-	printf("find 1.8: %f\n", ret);
-	ret = centroidset_find(centroidset, 0);
-	printf("find 0 (not there) %f\n", ret);
-	ret = centroidset_erase(centroidset, 1.800000);
-	printf("erase 1.800000: %f\n", ret);
-	ret = centroidset_find(centroidset, 1.800000);
-	printf("find 1.8: %f\n", ret);
-	centroidset_printset(centroidset);
-	centroidset_delete(centroidset);
+static size_t _centroidset_headsum(centroidset_t *centroidset, jsw_rbnode_t *node, double until) {
+  if (!node) {
+    return 0;
+  }
+  // iterate over all the values in the tree that are between the minimum and
+  // strictly less than the centroid mean. and sum up their weight.
+  centroid_t *centroid = (centroid_t *) node->data;
+  if (centroid->mean >= until) {
+    return 0;
+  }
+  size_t sum = centroid->weight;
+  sum += _centroidset_headsum(centroidset, node->link[0], until);
+  sum += _centroidset_headsum(centroidset, node->link[1], until);
+  return sum;
 }
 
-
-*/
+/**
+  Iterate over all the values in the tree that are between the minimum and
+  strictly less than the centroid mean. and sum up their weight.
+ */
+size_t centroidset_headsum(centroidset_t *centroidset, centroid_t *until) {
+  return _centroidset_headsum(centroidset, ((centroidset_t *)centroidset)->root, until->mean);
+}

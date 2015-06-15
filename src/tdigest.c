@@ -4,14 +4,17 @@
 #include "centroid.c"
 #include <math.h>
 // #include <stdlib.h>
+#include <assert.h>
 
-tdigest_t *tdigest_new(double delta, int compression)
+tdigest_t *_tdigest_new(const double delta, const int K, const double compression_trigger)
 {
 	tdigest_t *tdigest = (tdigest_t *)malloc ( sizeof *tdigest );
 	tdigest->count = 0;
-  tdigest->compression = compression;
+  tdigest->K = K;
   tdigest->delta = delta;
   tdigest->centroidset = centroidset_new();
+
+  tdigest->compression_trigger = compression_trigger;
 
   static bool seeded = false;
   if (!seeded) {
@@ -21,19 +24,17 @@ tdigest_t *tdigest_new(double delta, int compression)
 	return tdigest;
 }
 
+tdigest_t *tdigest_new(const double delta, const int K)
+{
+  return _tdigest_new(delta, K, K / delta);
+}
+
 tdigest_t *tdigest_new_default()
 {
-  return tdigest_new(0.01f, 100);
+  return tdigest_new(0.01, 25);
 }
 
 void tdigest__add_centroid(tdigest_t *self, centroid_t *centroid) {
-  /*
-    def _add_centroid(self, centroid):
-        if centroid.mean not in self.C:
-            self.C.insert(centroid.mean, centroid)
-        else:
-            self.C[centroid.mean].update(centroid.mean, centroid.count)
-  */
   centroid_t *found;
   found = (centroid_t *)jsw_rbfind(self->centroidset, centroid);
   if (found) {
@@ -43,54 +44,15 @@ void tdigest__add_centroid(tdigest_t *self, centroid_t *centroid) {
   }
 }
 
-static void tdigest__update_centroid(tdigest_t * self, centroid_t *centroid, double x, int w)
+static void tdigest__update_centroid(const tdigest_t * self, centroid_t *centroid, const double x, const int w)
 {
   centroidset_pop(self->centroidset, centroid);
   centroid_update(centroid, x, w);
-  tdigest__add_centroid(self, centroid); // centroidset_weighted_insert(self->centroidset, x, w);
-}
-
-static double _threshold(tdigest_t *self, double q)
-{
-  return 4 * self->count * self->delta * q * (1 - q);
-}
-
-/*static*/ double _compute_centroid_quantile(tdigest_t *self, centroid_t *centroid)
-{
-/*
-  def _compute_centroid_quantile(self, centroid):
-      denom = self.n
-      cumulative_sum = sum(
-          c_i.count for c_i in self.C.value_slice(-float('Inf'), centroid.mean))
-      return (centroid.count / 2. + cumulative_sum) / denom
- */
-  size_t denom = self->count;
-  int cumulative_sum = 0;
-  // iterate over all the values in the tree that are between the minimum and
-  // strictly less than the centroid mean. and sum up their weight.
-  centroidset_t *tree = self->centroidset;
-  jsw_rbnode_t *it = tree->root;
-
-  while ( it != NULL ) {
-    int cmp = tree->cmp ( it->data, (void *)centroid );
-
-    if (cmp == 0)
-      cmp = -1; // dont visit the bigger part of the tree
-    else if (cmp < 0)
-      cumulative_sum += ((centroid_t *)it->data)->weight;
-
-    /*
-      If the tree supports duplicates, they should be
-      chained to the right subtree for this to work
-    */
-    it = it->link[cmp < 0];
-  }
-
- return (centroid->weight /2.0f + cumulative_sum) / denom;
+  centroidset_insert(self->centroidset, centroid);
 }
 
 static tdigest_t *tdigest_new_fromdata(tdigest_t * self, centroid_t *data_arr, size_t size) {
-  tdigest_t * new_digest = tdigest_new(self->delta, self->compression);
+  tdigest_t * new_digest = _tdigest_new(self->delta, self->K, self->compression_trigger);
   centroid_arr_shuffle(data_arr, size);
   for (size_t i = 0; i < size; i++) {
     tdigest_update(new_digest, data_arr[i].mean, data_arr[i].weight);
@@ -107,78 +69,58 @@ static void tdigest_compress(tdigest_t * self) {
   self->centroidset = new_digest->centroidset;
 }
 
-void tdigest_update(tdigest_t * tdigest, double x, const size_t w) {
+void tdigest_update(tdigest_t * tdigest, const double x, const size_t w) {
   tdigest->count += w;
   if (w == tdigest->count) { // no node yet in the tdigest.
     centroidset_weighted_insert(tdigest->centroidset, x, w);
     return;
   }
-  // printf("Getting the centroidset_closest %f\n", x);
-	centroid_t data0 = { .weight=0 }, data1 = { .weight=0 };
-	// centroid_t data0, data1;
-  centroidset_closest(tdigest->centroidset, x, &data0, &data1);
-  // printf("Got the centroidset_closest\n");
-  // centroid_print(&data0);
-
-  size_t w_d = w;
-
-  centroid_t *centroid;
+	centroid_t closest_lt = { .weight=0, .mean=0 }, closest_gt = { .weight=0, .mean=0 }, *neighbor = NULL, *closest = NULL;
+  centroidset_closest(tdigest->centroidset, x, &closest_lt, &closest_gt);
   int i;
-  if (data1.weight != 0) {
-    i = 2;
-  } else if (data0.weight != 0) {
+  if (closest_gt.weight != 0) {
+    i = 2; // i=2 -> equi-distance 2 centroids
+  } else if (closest_lt.weight != 0) {
     i = 1;
   } else {
-    i = 0;
+    // we should not be here. there is at least one node to be found
+    // or the tree is empty and we have done that case already.
+    centroidset_weighted_insert(tdigest->centroidset, x, w);
+    return;
   }
-  while (w_d > 0 && i != 4) {
-    // printf("i %i; w_d %f\n", i, w_d);
-    // choose one of the 2 centroids - randomly if there are 2 of them.
-    if (i == 0) {
-      centroidset_weighted_insert(tdigest->centroidset, x, w_d);
-      break;
-    } else if (i == 1) {
-      centroid = &data0;
-      i = 4;
-    } else if (i == 3) {
-      centroid = &data1;
-      i = 4;
-    } else if (i == 2) {
-      const int random_bit = rand() & 1;
-      if (random_bit == 0) {
-        centroid = &data0;
-        i = 3;
-      } else {
-        centroid = &data1;
-        i = 1;
-      }
+  size_t sum = centroidset_headsum(tdigest->centroidset, &closest_lt);
+  double n = 1.0;
+  while (i != 0) {
+    if (i == 2) {
+      neighbor = &closest_gt;
     } else {
-      centroid = &data1;
+      neighbor = &closest_lt;
     }
-    double q = _compute_centroid_quantile(tdigest, centroid);
+    i--;
+    double q = (sum + neighbor->weight / 2.0) / tdigest->count;
+    // double k = 4 * tdigest->count * q * (1 - q) / tdigest->K;
+    double k = 4 * tdigest->count * q * (1 - q) * tdigest->delta;
 
-    // This filters out centroids that do not satisfy the second part
-    // of the definition of S. See original paper by Dunning.
-    double threshold = _threshold(tdigest, q);
-    if (centroid->weight + w_d > threshold) {
-      continue;
+    // when
+    if (neighbor->weight + w <= k) {
+      if (n == 1 || drand48() * n < 1) {
+        closest = neighbor;
+      }
+      n++;
     }
-
-    // delta_w = min(self._theshold(q) - c_j.count, w_d)
-    double delta_w = fmin(threshold - centroid->weight, w_d);
-
-    tdigest__update_centroid(tdigest, centroid, x, delta_w);
-    w_d -= delta_w;
+    sum += neighbor->weight;
   }
 
-
-  if (w_d > 0) {
-    centroid_t ncentroid = { .weight=w_d, .mean=x };
-    tdigest__add_centroid(tdigest, &ncentroid);
+  if (closest == NULL) {
+    centroidset_weighted_insert(tdigest->centroidset, x, w);
+  } else {
+    tdigest__update_centroid(tdigest, closest, x, w);
   }
-  if (tdigest->centroidset->size > tdigest->compression / tdigest->delta) {
-    printf("Compressing %zu > %f / %f > \n", tdigest->centroidset->size, tdigest->compression, tdigest->delta);
-    // tdigest_compress(tdigest);
+
+  if (tdigest->centroidset->size > tdigest->compression_trigger) {
+    // printf("%zu Compressing %zu > %f = %d / %f \n", tdigest->count, tdigest->centroidset->size, tdigest->K / tdigest->delta, tdigest->K, tdigest->delta);
+    tdigest_compress(tdigest);
+    // printf("After compressing %zu > %f = %d / %f \n", tdigest->centroidset->size, tdigest->K / tdigest->delta, tdigest->K, tdigest->delta);
   }
 }
 
@@ -213,7 +155,7 @@ tdigest_t * tdigest__add(tdigest_t *self, tdigest_t *other_digest)
  * Computes the percentile of a specific value in [0,1], ie. computes F^{-1}(q) where F^{-1} denotes
  * the inverse CDF of the distribution.
  */
-double tdigest_percentile(tdigest_t *self, double q)
+double tdigest_percentile(const tdigest_t *self, double q)
 {
   if (q < 0 || q >1) {
     printf("Invalid argument to request a percentile: %f must be between 0 and 1, inclusive.", q);

@@ -7,12 +7,12 @@ int main()
 {
 	centroidset_t *centroidset;
 	centroidset = centroidset_new();
-	centroidset_insert(centroidset, 1.0);
-	centroidset_insert(centroidset, 2.0);
-	centroidset_insert(centroidset, 1.5);
+	centroidset_weighted_insert(centroidset, 1.0, 1);
+	centroidset_weighted_insert(centroidset, 2.0, 1);
+	centroidset_weighted_insert(centroidset, 1.5, 1);
 	centroidset_weighted_insert(centroidset, 9.9, 3);
-	centroidset_insert(centroidset, 1.8);
-	centroidset_insert(centroidset, 3.3);
+	centroidset_weighted_insert(centroidset, 1.8, 1);
+	centroidset_weighted_insert(centroidset, 3.3, 1);
 	double ret;
 	ret = centroidset_find(centroidset, 1.0f);
 	printf("find 1.0: %f\n", ret);
