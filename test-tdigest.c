@@ -47,5 +47,7 @@ int main()
   tp = tdigest_percentile(tdigest, 0.99f);
   printf("tdigest_percentile 0.99 %f err: %f\n", tp, fabs(tp - 0.99));
 
+  tdigest_delete(tdigest);
+
   return 0;
 }

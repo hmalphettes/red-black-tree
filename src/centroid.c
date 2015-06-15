@@ -148,7 +148,11 @@ int centroidset_weighted_insert(centroidset_t *centroidset, double mean, int wei
 	centroid->mean = mean;
 	centroid->weight = weight;
 
-  return centroidset_insert(centroidset, centroid);
+  int ret = centroidset_insert(centroidset, centroid);
+  if (ret == 0) {
+    free(centroid);
+  }
+  return ret;
 }
 
 int centroidset_erase(centroidset_t *centroidset, double mean)
@@ -166,6 +170,7 @@ int centroidset_erase(centroidset_t *centroidset, double mean)
 		return -1;
 	}
 
+	free(centroid);
 	return 0;
 }
 

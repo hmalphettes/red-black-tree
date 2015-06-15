@@ -24,6 +24,11 @@ tdigest_t *_tdigest_new(const double delta, const int K, const double compressio
 	return tdigest;
 }
 
+void tdigest_delete(tdigest_t *self) {
+  centroidset_delete(self->centroidset);
+  free(self);
+}
+
 tdigest_t *tdigest_new(const double delta, const int K)
 {
   return _tdigest_new(delta, K, K / delta);
@@ -66,7 +71,10 @@ static void tdigest_compress(tdigest_t * self) {
   tdigest_t * new_digest;
 
   new_digest = tdigest_new_fromdata(self, data, centroidset_size(self->centroidset));
+  centroidset_delete(self->centroidset);
   self->centroidset = new_digest->centroidset;
+  free(new_digest);
+  free(data);
 }
 
 void tdigest_update(tdigest_t * tdigest, const double x, const size_t w) {
@@ -134,7 +142,6 @@ tdigest_t * tdigest__add(tdigest_t *self, tdigest_t *other_digest)
   size_t s2 = centroidset_size(other_digest->centroidset);
 
   centroid_t* c1 = centroidset_values(self->centroidset);
-  centroid_t* c2 = centroidset_values(other_digest->centroidset);
 
   centroid_t *data;
   data = (centroid_t*)malloc(sizeof(centroid_t) * (s1 + s2));
@@ -143,11 +150,19 @@ tdigest_t * tdigest__add(tdigest_t *self, tdigest_t *other_digest)
   for (i = 0; i < s1; i++) {
     data[i] = c1[i];
   }
+  free(c1);
+
+  centroid_t* c2 = centroidset_values(other_digest->centroidset);
   for (i = 0; i < s2; i++) {
     data[i+s1] = c2[i];
   }
+  free(c2);
+
   i++;
-  return tdigest_new_fromdata(self, data, i);
+  tdigest_t *res;
+  res = tdigest_new_fromdata(self, data, i);
+  free(data);
+  return res;
 }
 
 /////////////////////// PUBLIC API
