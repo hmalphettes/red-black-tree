@@ -36,7 +36,6 @@ typedef struct jsw_rbtrav jsw_rbtrav_t;
 typedef int   (*cmp_f) ( const void *p1, const void *p2 );
 typedef void *(*dup_f) ( void *p );
 typedef void  (*rel_f) ( void *p );
-typedef void (*closest_f) (const void *p0, const void *plt, const void *pgt, void *data0, void *data1);
 
 /** moved from the implementation so we can reuse those in tdigest.c */
 #ifndef HEIGHT_LIMIT
