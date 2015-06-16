@@ -36,6 +36,10 @@ test-centroid: build
 test-tdigest: build
 	$(CC) $(CFLAGS) -Ibuild/include -o test-tdigest test-tdigest.c -Lbuild/lib -ljsw_rbtree
 
+test-leaks-tdigest: test-tdigest
+	# to install valgrind on Macos: brew install --HEAD valgrind
+	valgrind --leak-check=yes ./test-tdigest
+
 tests: test-centroid test-tdigest
 
 install: all
